@@ -1,0 +1,47 @@
+[
+{
+  "_id": "5d79a8eca4087bc993648851",
+  "index": 0,
+  "guid": "1d0cf6f1-d423-407e-a7f5-c251085b8701",
+  "isActive": true,
+  "balance": "$3,601.18",
+  "picture": "http://placehold.it/32x32",
+  "age": 23,
+  "eyeColor": "blue",
+  "name": "Camille Nixon",
+  "gender": "female",
+  "company": "ASIMILINE",
+  "email": "camillenixon@asimiline.com",
+  "phone": "+1 (868) 562-3596",
+  "address": "693 Nostrand Avenue, Wheatfields, West Virginia, 4725",
+  "about": "Nostrud enim fugiat minim Lorem enim laborum incididunt aliquip minim velit eiusmod irure sint exercitation. Aliqua irure sint duis veniam eu excepteur. Pariatur minim labore amet ipsum in eiusmod sit qui ad.\r\n",
+  "registered": "2015-05-08T04:40:11 +07:00",
+  "latitude": -89.48218,
+  "longitude": 89.406674,
+  "tags": [
+    "id",
+    "excepteur",
+    "officia",
+    "non",
+    "proident",
+    "ea",
+    "eu"
+  ],
+  "friends": [
+    {
+      "id": 0,
+      "name": "Coffey Dorsey"
+    },
+    {
+      "id": 1,
+      "name": "Louise Wilcox"
+    },
+    {
+      "id": 2,
+      "name": "Jordan Lancaster"
+    }
+  ],
+  "greeting": "Hello, Camille Nixon! You have 9 unread messages.",
+  "favoriteFruit": "banana"
+}
+]
