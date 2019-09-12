@@ -5,7 +5,7 @@
 Serenity now! Safe `JSON.parse`
 
 ```js
-import parseJson from 'json-statham'
+import parseJson from 'json-alexander'
 
 parseJson('{"valid": "works"}')
 // object -> {"valid": "works"}
