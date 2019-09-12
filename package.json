@@ -4,7 +4,7 @@
   "description": "Serenity Now! Safely parse JSON",
   "main": "src/index.js",
   "scripts": {
-    "test": "ava",
+    "test": "ava --verbose",
     "watch": "ava --watch --verbose",
     "publish": "git push origin && git push origin --tags",
     "release:patch": "npm version patch && npm publish",

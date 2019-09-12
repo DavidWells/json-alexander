@@ -3,7 +3,7 @@ import path from 'path'
 import test from 'ava'
 import parseJson from '../src'
 
-test('baseline', t => {
+test('baseline JSON', t => {
   // Native
   t.is(JSON.parse('"lol"'), 'lol')
   // Library
@@ -140,7 +140,7 @@ test('Arrays', t => {
   t.deepEqual(parseJson("['x', \'y\', 'z']"), ['x', 'y', 'z'])
 
   const x = parseJson("['arr", [])
-  console.log('thing', x)
+  // console.log('thing', x)
   t.deepEqual(x, ['arr'])
   t.is(Array.isArray(x), true)
 })

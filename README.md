@@ -5,14 +5,23 @@
 Serenity now! Safe `JSON.parse`
 
 ```js
-import parseJson from 'json-alexander'
+import parseJSON from 'json-alexander'
 
-parseJson('{"valid": "works"}')
-// object -> {"valid": "works"}
-parseJson("{'malformed': 'works'}")
-// object -> {"malformed": "works"}
-parseJson('{"unbalanced": "object"')
-// object -> {"unbalanced": "object" }
+/* Normal Valid JSON */
+parseJSON('{"valid": "works"}')
+// -> {"valid": "works"}
+
+/* Javascript objects */
+parseJSON({ key: 'val' })
+// -> { key: 'val' }
+
+/* Malformed JSON */
+parseJSON("{'malformed': 'works'}")
+// -> {"malformed": "works"}
+
+/* Unbalanced JSON */
+parseJSON('{"unbalanced": "object"')
+// -> {"unbalanced": "object" }
 ```
 
 Returns `undefined` if value passed in is not parsable

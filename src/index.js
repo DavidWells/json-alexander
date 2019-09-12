@@ -10,8 +10,8 @@ module.exports = function parse(x, defaultValue) {
     if (isNull(value) && defaultValue) return defaultValue
     return JSON.parse(value)
   } catch (e) {
-    console.log(`JSON.parse failed: ${e.message}`)
-    console.log(value)
+    // console.log(`JSON.parse failed: ${e.message}`)
+    // console.log(value)
     try {
       const stringify = JSON.stringify(trimQuotes(value))
       return JSON.parse(stringify)
@@ -136,15 +136,15 @@ function coerceToString(val) {
   if (val === undefined && type === 'undefined') return
 
   if (Array.isArray(val)) {
-    console.log(`Converting Array into string`)
+    // console.log(`Converting Array into string`)
     return JSON.stringify(val)
   }
   if (type === 'object') {
-    console.log(`Converting Object into string`)
+    // console.log(`Converting Object into string`)
     return JSON.stringify(val)
   }
   if (type === 'boolean') {
-    console.log(`Converting Boolean into string`)
+    // console.log(`Converting Boolean into string`)
     return JSON.stringify(val)
   }
   return null
