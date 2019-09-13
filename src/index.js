@@ -122,11 +122,11 @@ function cleanInner(str, pairs, quoteType) {
   const inverse = (quoteType === '"') ? "'" : '"'
   return pairs.reduce((acc, curr) => {
     const replaceInnerConflict = new RegExp(`${quoteType}`, 'g')
-    console.log('replaceInnerConflict', replaceInnerConflict)
+    // console.log('replaceInnerConflict', replaceInnerConflict)
     const replaceInverseStart = new RegExp(`^${inverse}`)
-    console.log('replaceInverseStart', replaceInverseStart)
+    // console.log('replaceInverseStart', replaceInverseStart)
     const replaceInverseEnd = new RegExp(`${inverse}$`)
-    console.log('replaceInverseEnd', replaceInverseEnd)
+    // console.log('replaceInverseEnd', replaceInverseEnd)
     const fix = curr
       // replace inner "
       .replace(replaceInnerConflict, `${word}`)
