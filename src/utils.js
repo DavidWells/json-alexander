@@ -54,6 +54,10 @@ function guessDefault(x, defaultReturn = '') {
   console.log('guess')
   return defaultReturn
 }
+
+Regex
+const replaceQuotesNotInside = /(')(?=(?:[^']|'[^]*')*$)/g
+
 */
 
 module.exports = {

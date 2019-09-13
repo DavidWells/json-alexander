@@ -28,6 +28,9 @@ module.exports.simple = function simpleParse(data, defaultValue) {
     }
     return JSON.parse(data)
   } catch (e) {
+    if (typeof data === 'object') {
+      return data
+    }
     return defaultValue
   }
 }
@@ -57,10 +60,12 @@ function coerceStr(str, defaultReturn) {
   const type = getType(str, defaultReturn)
   if ((type === 'array' || type === 'object') && !isBalanced(str)) {
     // Find and try to fix mismatch brackets
-    const regex = /(\[|\{|\()(\s+)?(['|"])/g
-    const match = regex.exec(str)
+    // https://regex101.com/r/qqkJSR/3
+    const leadingBrackets = /^(?:\s+)?([[{(])(\s+)?(['|"])/g
+    const match = leadingBrackets.exec(str)
     if (match) {
-      const start = match[0].replace(regex, '$1$3')
+      // replace whitespace
+      const start = match[0].replace(leadingBrackets, '$1$3')
       const end = start.split('').reverse().join('')
         .replace(/\[$/, ']')
         .replace(/\{$/, '}')
@@ -77,7 +82,9 @@ function coerceStr(str, defaultReturn) {
     }
   }
   // If looks like array or object try and fix
-  if (str.match(/^[[{]\s?['"]/) && str.match(/['"]\s?[\]}]$/)) {
+  const startsWith = /^[[{]\s?['"]/ // {' {" [' ["
+  const endsWith = /['"]\s?[\]}]$/ // '} "} '] "]
+  if (str.match(startsWith) && str.match(endsWith)) {
     // Single Quoted objects
     return invertQuotes(str, "'", type)
   }
@@ -90,12 +97,13 @@ function invertQuotes(str, quoteType, objectType) {
   // console.log('Original', str)
   // const replaceOuterQuotes = new RegExp(`(${quoteType})(?=(?:[^${quoteType}]|${quoteType}[^]*${quoteType})*)`, 'g')
   // console.log('replaceOuterQuotes', replaceOuterQuotes)
-  const ogPairsR = new RegExp(`${quoteType}[^\\\\${quoteType}]*(\\\\${quoteType}[^\\\\${quoteType}]*)*${quoteType}`, 'g')
-  const ogPairs = str.match(ogPairsR)
-  if (!ogPairs) {
+  const quotePairsRegex = new RegExp(`${quoteType}[^\\\\${quoteType}]*(\\\\${quoteType}[^\\\\${quoteType}]*)*${quoteType}`, 'g')
+
+  const quotePairs = str.match(quotePairsRegex)
+  if (!quotePairs) {
     return str
   }
-  const redactedOuter = cleanInner(str, ogPairs, quoteType)
+  const redactedOuter = cleanInner(str, quotePairs, quoteType)
   const redactedString = redactedOuter
     .replace(/'/g, 'INNERSINGLEQUOTE')
     .replace(/"/g, 'INNERDOUBLEQUOTE')
@@ -114,9 +122,11 @@ function cleanInner(str, pairs, quoteType) {
   const inverse = (quoteType === '"') ? "'" : '"'
   return pairs.reduce((acc, curr) => {
     const replaceInnerConflict = new RegExp(`${quoteType}`, 'g')
+    console.log('replaceInnerConflict', replaceInnerConflict)
     const replaceInverseStart = new RegExp(`^${inverse}`)
+    console.log('replaceInverseStart', replaceInverseStart)
     const replaceInverseEnd = new RegExp(`${inverse}$`)
-    // console.log('replaceInnerConflict', replaceInnerConflict)
+    console.log('replaceInverseEnd', replaceInverseEnd)
     const fix = curr
       // replace inner "
       .replace(replaceInnerConflict, `${word}`)
