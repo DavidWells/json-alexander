@@ -35,7 +35,7 @@ patterns.forEach((pat) => {
   }
 })
 
-/*
+/* See ./tests/regexTest for output
 const regex = /'[^\\']*(\\'[^\\']*)*'/g // RegExp
 const pattern = regex.source // String
 const cacheConfig = {

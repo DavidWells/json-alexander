@@ -1,10 +1,6 @@
-const {
-  isBalanced,
-  trimQuotes,
-  isNull
-} = require('./utils')
+const { isBalanced, trimQuotes, isNull } = require('./utils')
 
-module.exports = function parse(x, defaultValue) {
+module.exports.parseJSON = function parseJSON(x, defaultValue) {
   const value = (typeof x === 'string') ? coerceStr(x, defaultValue) : coerceToString(x)
   try {
     if (isNull(value) && defaultValue) return defaultValue
@@ -21,7 +17,7 @@ module.exports = function parse(x, defaultValue) {
   }
 }
 
-module.exports.simple = function simpleParse(data, defaultValue) {
+module.exports.safeParse = function simpleParse(data, defaultValue) {
   try {
     if (isNull(data) && defaultValue) {
       return defaultValue
