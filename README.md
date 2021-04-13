@@ -1,8 +1,8 @@
-# Friendly JSON Parse
+# Forgiving JSON Parser
 
 <img align="right" src="https://user-images.githubusercontent.com/532272/64802133-d3d2b180-d53e-11e9-8182-101a1b927e29.jpg">
 
-Serenity now! Safe `JSON.parse`
+Serenity now! A forgiving JSON parser 🙏
 
 ```js
 import { parseJSON } from 'json-alexander'
@@ -22,9 +22,13 @@ parseJSON("{'malformed': 'works'}")
 /* Unbalanced JSON */
 parseJSON('{"unbalanced": "object"')
 // -> {"unbalanced": "object" }
+
+/* Javascript objects missing quotes */
+parseJSON('{ hello: there }')
+// -> { "hello": "there" }
 ```
 
-Returns `undefined` if value passed in is not parsable
+Throws if value passed in is not parsable.
 
 ## Other options
 
@@ -33,6 +37,14 @@ Returns `undefined` if value passed in is not parsable
 - https://www.npmjs.com/package/try-json
 
 ## Security concerns
+
+This package was built for nicer arg parser for CLIs. e.g.
+
+```
+my-cli-command --data '{ foo: bar }'
+```
+
+If you need a JSON parser for your server, consider the `safeParse` export instead.
 
 This package makes use of regular expressions when fixing malformed json. As a result, it may be vulnerable to a [REDOS attack](https://snyk.io/blog/redos-and-catastrophic-backtracking).
 

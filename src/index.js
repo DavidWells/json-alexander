@@ -1,21 +1,7 @@
 const { isBalanced, trimQuotes, isNull } = require('./utils')
 
-module.exports.parseJSON = function parseJSON(x, defaultValue) {
-  const value = (typeof x === 'string') ? coerceStr(x, defaultValue) : coerceToString(x)
-  try {
-    if (isNull(value) && defaultValue) return defaultValue
-    return JSON.parse(value)
-  } catch (e) {
-    // console.log(`JSON.parse failed: ${e.message}`)
-    // console.log(value)
-    try {
-      const stringify = JSON.stringify(trimQuotes(value))
-      return JSON.parse(stringify)
-    } catch (e) {
-      return defaultValue
-    }
-  }
-}
+const DEBUG = false
+const log = (DEBUG) ? log : () => {} 
 
 module.exports.safeParse = function simpleParse(data, defaultValue) {
   try {
@@ -31,7 +17,152 @@ module.exports.safeParse = function simpleParse(data, defaultValue) {
   }
 }
 
-function getType(value, defaultValue) {
+module.exports.parseJSON = function parseJSON(input, defaultValue) {
+
+  if (isNull(input) || input === '' || input === undefined) {
+    return defaultValue || input
+  }
+
+  const value = (typeof input === 'string') ? coerceStr(input, defaultValue) : coerceToString(input)
+
+  if (value === 'true') {
+    return true
+  }
+  if (value === 'false') {
+    return false
+  }
+  
+  const [err, first ] = parse(value)
+  // log('trimmed', trimmed)
+  if (first) {
+    log('first', first)
+    if (!needsMoreProcessing(first)) {
+      return first
+    }
+  }
+
+  const trimmed = trimQuotes(value)
+  // log('trimmed', trimmed)
+  const [errTwo, second ] = parse(trimmed)
+  if (second) {
+    log('second', second)
+    if (!needsMoreProcessing(second)) {
+      return second
+    }
+  }
+
+  const fixString = convertStringObjectToJsonString(trimmed)
+  // log('fixString', fixString)
+  const [errThree, third ] = parse(fixString)
+  if (third) {
+    log('third', third)
+    if (!needsMoreProcessing(third)) {
+      return third
+    }
+  }
+
+  const foo = coerceStr(fixString, defaultValue)
+  log('foo', foo)
+  const what = fixEscapedKeys(foo)
+  log('what', what)
+  const [errFour, four ] = parse(what)
+
+  if (four) {
+    log('four', four)
+    if (!needsMoreProcessing(four)) {
+      return four
+    }
+  }
+
+  const final = trimQuotes(what.replace(/'/g, '"'))
+  const [errFive, five ] = parse(final)
+  if (five) {
+    log('five', five)
+    if (!needsMoreProcessing(five)) {
+      return five
+    }
+  }
+
+  // Wrap values missing quotes { cool: nice }
+  const newer = final
+    // Temporarily stash boolean values
+    .replace(/:\s?(true+?)\s?/g, ': "TRUE_PLACEHOLDER"')
+    .replace(/:\s?(false+?)\s?/g, ': "FALSE_PLACEHOLDER"')
+    // .replace(/\[\s?(true+?)\s?\]/, 'TRUE_PLACEHOLDER')
+    // .replace(/\[\s?(false+?)\s?\]/, 'FALSE_PLACEHOLDER')
+    .replace(/\[\s?([A-Za-z]+?)\s?\]/, '[ "$1" ]')
+    .replace(/:\s?([A-Za-z]+?)\s}/g, ': "$1" }')
+  // log('newer', newer)
+  // Wrap values missing quotes
+  const newerStill = newer
+    .replace(/:\s?([A-Za-z]+?)\s?,/g, ': "$1",')
+
+    // Reset Temporarily stashed boolean values
+    .replace(/:\s?("TRUE_PLACEHOLDER"+?)\s?/g, ': true')
+    .replace(/:\s?("FALSE_PLACEHOLDER"+?)\s?/g, ': false')
+    // trailing booleans
+
+    
+  // log('newerStill', newerStill)
+
+  const [errSeven, six ] = parse(newerStill)
+  if (six) {
+    log('six', six)
+    return six
+  }
+
+  // Attempt final rebalance
+  const balance = coerceStr(newerStill, defaultValue)
+    .replace(/\sfalse"}$/, ' false}')
+    .replace(/\strue"}$/, ' true}')
+  
+  const [errSix, seven ] = parse(balance)
+  if (seven) {
+    log('seven', seven)
+    return seven
+  }
+
+  throw new Error('Unable to parse JSON')
+}
+
+function fixEscapedKeys(value) {
+  return value.replace(/\s\\"/g, '"').replace(/\\"\:/, '":')
+}
+
+function parse(value) {
+  let result, error
+  try {
+    result = JSON.parse(value)
+  } catch (err) {
+    // log('err', err)
+    error = err
+  }
+  return [ error, result ]
+}
+
+function convertStringObjectToJsonString(str) {
+  return str.replace(/(\w+:)|(\w+ :)/g, (matchedStr) => {
+    return '"' + matchedStr.substring(0, matchedStr.length - 1) + '":'
+  })
+}
+
+/*
+function convertValuesObjectToJsonString(str) {
+  return str.replace(/:(\w+')|(:\w+ ')/g, (matchedStr) => {
+    return ": '" + matchedStr.substring(0, matchedStr.length - 1) + "'"
+  })
+}
+*/
+
+function needsMoreProcessing(value) {
+  if (typeof value !== 'string') {
+    return false
+  }
+  const stringType = getStringType(value)
+  return stringType === 'array' || stringType === 'object'
+}
+
+function getStringType(value, defaultValue) {
   if (Array.isArray(value) || Array.isArray(defaultValue)) {
     return 'array'
   }
@@ -53,7 +184,7 @@ function getType(value, defaultValue) {
 function coerceStr(str, defaultReturn) {
   if (str === 'false' || str === 'true') return str
   let rawVal = trimQuotes(str)
-  const type = getType(str, defaultReturn)
+  const type = getStringType(str, defaultReturn)
   if ((type === 'array' || type === 'object') && !isBalanced(str)) {
     // Find and try to fix mismatch brackets
     // https://regex101.com/r/qqkJSR/3
@@ -90,9 +221,9 @@ function coerceStr(str, defaultReturn) {
 }
 
 function invertQuotes(str, quoteType, objectType) {
-  // console.log('Original', str)
+  // log('Original', str)
   // const replaceOuterQuotes = new RegExp(`(${quoteType})(?=(?:[^${quoteType}]|${quoteType}[^]*${quoteType})*)`, 'g')
-  // console.log('replaceOuterQuotes', replaceOuterQuotes)
+  // log('replaceOuterQuotes', replaceOuterQuotes)
   const quotePairsRegex = new RegExp(`${quoteType}[^\\\\${quoteType}]*(\\\\${quoteType}[^\\\\${quoteType}]*)*${quoteType}`, 'g')
 
   const quotePairs = str.match(quotePairsRegex)
@@ -103,13 +234,13 @@ function invertQuotes(str, quoteType, objectType) {
   const redactedString = redactedOuter
     .replace(/'/g, 'INNERSINGLEQUOTE')
     .replace(/"/g, 'INNERDOUBLEQUOTE')
-  // console.log('redactedString', redactedString)
+  // log('redactedString', redactedString)
   const repInner = (objectType === 'array') ? '"' : `\\"`
   const fixed = redactedString
     .replace(/OUTERDOUBLEQUOTE|OUTERSINGLEQUOTE/g, '"')
     .replace(/INNERSINGLEQUOTE/g, `'`)
     .replace(/INNERDOUBLEQUOTE/g, repInner)
-  // console.log('fixed', fixed)
+  // log('fixed', fixed)
   return fixed
 }
 
@@ -118,11 +249,11 @@ function cleanInner(str, pairs, quoteType) {
   const inverse = (quoteType === '"') ? "'" : '"'
   return pairs.reduce((acc, curr) => {
     const replaceInnerConflict = new RegExp(`${quoteType}`, 'g')
-    // console.log('replaceInnerConflict', replaceInnerConflict)
+    // log('replaceInnerConflict', replaceInnerConflict)
     const replaceInverseStart = new RegExp(`^${inverse}`)
-    // console.log('replaceInverseStart', replaceInverseStart)
+    // log('replaceInverseStart', replaceInverseStart)
     const replaceInverseEnd = new RegExp(`${inverse}$`)
-    // console.log('replaceInverseEnd', replaceInverseEnd)
+    // log('replaceInverseEnd', replaceInverseEnd)
     const fix = curr
       // replace inner "
       .replace(replaceInnerConflict, `${word}`)
@@ -142,15 +273,15 @@ function coerceToString(val) {
   if (val === undefined && type === 'undefined') return
 
   if (Array.isArray(val)) {
-    // console.log(`Converting Array into string`)
+    // log(`Converting Array into string`)
     return JSON.stringify(val)
   }
   if (type === 'object') {
-    // console.log(`Converting Object into string`)
+    // log(`Converting Object into string`)
     return JSON.stringify(val)
   }
   if (type === 'boolean') {
-    // console.log(`Converting Boolean into string`)
+    // log(`Converting Boolean into string`)
     return JSON.stringify(val)
   }
   return null
