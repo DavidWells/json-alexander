@@ -184,7 +184,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
 }
 
 function fixEscapedKeys(value) {
-  return value.replace(/\s\\"/g, '"').replace(/\\"\:/, '":')
+  return value.replace(/\s?\\"/g, '"').replace(/\\"\:/, '":')
 }
 
 function parse(value) {
@@ -206,11 +206,14 @@ function parse(value) {
 
 function convertStringObjectToJsonString(str) {
   return str.replace(/(\w+\s*(?::))[^:/]/g, (matchedStr) => {
-    const endsWith = matchedStr.endsWith('"')
-    const ending = (endsWith) ? '"' : ''
+    // console.log('matchedStr', matchedStr)
+    const endsWith = matchedStr.match(/(["'])$/)
+    const ending = (endsWith) ? endsWith[0] : ''
     const x = matchedStr.substring(0, matchedStr.length - 2)
     const y = x.trim().replace(/:/, '')
-    return '"' + y + '": ' + ending
+    const z = '"' + y + '": ' + ending
+    // console.log('z', z)
+    return z
   })
   .replace(/""/g, '"').replace(/"'/g, "'")
 }
