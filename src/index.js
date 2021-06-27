@@ -184,9 +184,11 @@ function parse(value) {
 
 function convertStringObjectToJsonString(str) {
   return str.replace(/(\w+\s*(?::))[^:/]/g, (matchedStr) => {
+    const endsWith = matchedStr.endsWith('"')
+    const ending = (endsWith) ? '"' : ''
     const x = matchedStr.substring(0, matchedStr.length - 2)
     const y = x.trim().replace(/:/, '')
-    return '"' + y + '": '
+    return '"' + y + '": ' + ending
   })
   .replace(/""/g, '"').replace(/"'/g, "'")
 }
