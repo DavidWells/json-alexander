@@ -183,6 +183,14 @@ test('Arrays', t => {
 
   t.deepEqual(parseJSON("['x', \'y\', 'z']"), ['x', 'y', 'z'])
 
+  t.deepEqual(parseJSON("[x, y, z]"), ['x', 'y', 'z'])
+
+  t.deepEqual(parseJSON("[a, b, 2, 3]"), ['a', 'b', 2, 3])
+
+  t.deepEqual(parseJSON("[a, b, { cool: true }]"), ['a', 'b', { cool: true }])
+
+  // t.deepEqual(parseJSON(`[a, b, ["1", "2"]]`), ['a', 'b', ['1', '2']])
+
   const x = parseJSON("['arr", [])
   // console.log('thing', x)
   t.deepEqual(x, ['arr'])

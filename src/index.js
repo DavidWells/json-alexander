@@ -31,6 +31,11 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   if (value === 'false') {
     return false
   }
+
+  const isNumber = Number(input)
+  if (typeof isNumber === 'number' && !isNaN(isNumber)) {
+    return isNumber
+  }
   
   const [err, first ] = parse(value)
   error = err
@@ -143,11 +148,10 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     .replace(/\strue"}$/, ' true}')
   
   const [errEight, seven ] = parse(balance)
+
+
   error = errEight
-  if (seven) {
-    log('seven', seven)
-    return seven
-  }
+ 
 
   if (newerStill.match(/^"?\[{/) && !newerStill.match(/\}\]$/)) {
     const [errNine, eight ] = parse(`${newerStill} }]`)
@@ -156,6 +160,24 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
       log('eight', eight)
       return eight
     }
+  }
+
+  const convert = seven || newerStill
+  if (typeof convert === 'string') {
+    const looksLikeArray = convert.match(/^\[(.*)\]/)
+    if (looksLikeArray && looksLikeArray[1]) {
+      // TODO refactor for array support e,g ["x", "y"] wont work here
+      const newVal = looksLikeArray[1].split(",").map((x) => {
+        return parseJSON(x.trim())
+      })
+      return newVal
+    }
+  }
+
+  if (seven) {
+    // Parse string like array [one, two, 2, 4]
+    log('seven', seven)
+    return seven
   }
  
   throw new Error(`Unable to parse JSON\n${error}\n\n${input}`)
