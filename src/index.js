@@ -107,7 +107,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     // [ xyz, 
     // .replace(/\[\s?([_@.A-Za-z]+?),\s?/g,  '[ "$1",')
     // .replace(/,\s?([_@.A-Za-z]+?)\s?\]/g, ', "$1" ]')
-    .replace(/:\s?([A-Za-z]+?)\s}/g, ': "$1" }')
+    .replace(/:\s?([A-Za-z]+?)\s?}/g, ': "$1" }')
 
 
   var pattern = /([^[]+(?=]))/gm
@@ -207,7 +207,7 @@ function parse(value) {
 function convertStringObjectToJsonString(str) {
   return str.replace(/(\w+\s*(?::))[^:/]/g, (matchedStr) => {
     // console.log('matchedStr', matchedStr)
-    const endsWith = matchedStr.match(/(["'A-Za-z0-9])$/)
+    const endsWith = matchedStr.match(/(["'A-Za-z0-9\[\{])$/)
     // console.log('endsWith', endsWith)
     const ending = (endsWith) ? endsWith[0] : ''
     const x = matchedStr.substring(0, matchedStr.length - 2)

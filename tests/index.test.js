@@ -179,6 +179,16 @@ test('Objects', t => {
   t.deepEqual(parseJSON("{ rad: true}"), {rad:true})
   t.deepEqual(parseJSON("{ rad: true }"), {rad:true})
   t.deepEqual(parseJSON("{ rad: 'true' }"), {rad:'true'})
+
+  t.deepEqual(parseJSON('{rad:["whatever","man"]}'),  {rad:["whatever","man"]})
+
+  t.deepEqual(parseJSON('{rad:{cool: "beans"}}'),  { rad: { cool: 'beans' } })
+
+  t.deepEqual(parseJSON('{rad: {cool: beans }}'),  { rad: { cool: 'beans' } })
+  t.deepEqual(parseJSON('{rad: {cool: beans}}'),  { rad: { cool: 'beans' } })
+  t.deepEqual(parseJSON('{rad: {cool:beans }}'),  { rad: { cool: 'beans' } })
+  t.deepEqual(parseJSON('{rad: {cool:beans}}'),  { rad: { cool: 'beans' } })
+  t.deepEqual(parseJSON('{rad:{cool:beans}}'),  { rad: { cool: 'beans' } })
 })
 
 test('Arrays', t => {
