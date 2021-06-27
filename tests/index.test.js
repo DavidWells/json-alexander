@@ -92,42 +92,46 @@ test('Javascript natives', t => {
 })
 
 test('Javascript strings', t => {
-  t.deepEqual(parseJSON('{ cool: "hi" }'), { cool: "hi" })
+  t.deepEqual(parseJSON('{ cool: "hi" }'), { cool: "hi" }, 'works?')
 
   const x = parseJSON('{ cool: "hi" }')
-  t.deepEqual(x, { cool: "hi" })
+  t.deepEqual(x, { cool: "hi" }, '1')
 
   const y = parseJSON("{ cool: 'hi' }")
-  t.deepEqual(y, { cool: "hi" })
+  t.deepEqual(y, { cool: "hi" }, '2')
 
   const z = parseJSON("[ { cool: 'hi', hehehehee: 'hi' } ]")
-  t.deepEqual(z, [ { cool: 'hi', hehehehee: 'hi' } ])
+  t.deepEqual(z, [ { cool: 'hi', hehehehee: 'hi' } ], '3')
 
   const a = parseJSON(`[ { cool: 'hi', hehehehee: "hi" } ]`)
-  t.deepEqual(a, [ { cool: 'hi', hehehehee: 'hi' } ])
+  t.deepEqual(a, [ { cool: 'hi', hehehehee: 'hi' } ], '4')
 
   const b = parseJSON(`{ cool: oops }`)
-  t.deepEqual(b, { cool: "oops" })
+  t.deepEqual(b, { cool: "oops" }, '5')
 
   const c = parseJSON(`{ cool: oops, noce: ododod }`)
-  t.deepEqual(c, { cool: "oops", noce: "ododod" })
+  t.deepEqual(c, { cool: "oops", noce: "ododod" }, '6')
 
   const d = parseJSON(`{ cool: oops, noce: true, wow: false }`)
-  t.deepEqual(d, { cool: "oops", noce: true, wow: false })
+  t.deepEqual(d, { cool: "oops", noce: true, wow: false }, '7')
 
   const e = parseJSON(`[{ cool: [oops], noce: true, wow: false }]`)
-  t.deepEqual(e, [{ cool: ["oops"], noce: true, wow: false }])
+  t.deepEqual(e, [{ cool: ["oops"], noce: true, wow: false }], '8')
 
   const f = parseJSON(`[{ cool: [{ oops: true }], noce: true, wow: false }]`)
-  t.deepEqual(f, [{ cool: [{ oops: true }], noce: true, wow: false }])
+  t.deepEqual(f, [{ cool: [{ oops: true }], noce: true, wow: false }], '9')
   
   // unblanced object
   const g = parseJSON(`{ cool: oops, noce: true, wow: false `)
-  t.deepEqual(g, { cool: "oops", noce: true, wow: false })
+  t.deepEqual(g, { cool: "oops", noce: true, wow: false }, '10')
   
+  // unblanced array
+  const zz = parseJSON(`[ 'xyz', 'one', 'two' `)
+  t.deepEqual(zz, ['xyz', 'one', 'two'])
+
   // unblanced array. FAILS
-  // const j = parseJSON(`[{ cool: oops, noce: true, wow: false `)
-  // t.deepEqual(j, [{ cool: "oops", noce: true, wow: false }])
+  const j = parseJSON(`[{ cool: oops, noce: true, wow: false `)
+  t.deepEqual(j, [{ cool: "oops", noce: true, wow: false }])
 })
 
 test('Balance malformed payloads', t => {

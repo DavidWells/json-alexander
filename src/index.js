@@ -1,7 +1,7 @@
 const { isBalanced, trimQuotes, isNull } = require('./utils')
 
 const DEBUG = false
-const log = (DEBUG) ? log : () => {} 
+const log = (DEBUG) ? console.log : () => {} 
 
 module.exports.safeParse = function simpleParse(data, defaultValue) {
   try {
@@ -18,7 +18,7 @@ module.exports.safeParse = function simpleParse(data, defaultValue) {
 }
 
 module.exports.parseJSON = function parseJSON(input, defaultValue) {
-
+  let error
   if (isNull(input) || input === '' || input === undefined) {
     return defaultValue || input
   }
@@ -33,6 +33,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   }
   
   const [err, first ] = parse(value)
+  error = err
   // log('trimmed', trimmed)
   if (first) {
     log('first', first)
@@ -44,6 +45,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   const trimmed = trimQuotes(value)
   // log('trimmed', trimmed)
   const [errTwo, second ] = parse(trimmed)
+  error = errTwo
   if (second) {
     log('second', second)
     if (!needsMoreProcessing(second)) {
@@ -52,8 +54,11 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   }
 
   const fixString = convertStringObjectToJsonString(trimmed)
-  // log('fixString', fixString)
+  //*
+  log('fixString', fixString)
+  /**/
   const [errThree, third ] = parse(fixString)
+  error = errThree
   if (third) {
     log('third', third)
     if (!needsMoreProcessing(third)) {
@@ -66,7 +71,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   const what = fixEscapedKeys(foo)
   log('what', what)
   const [errFour, four ] = parse(what)
-
+  error = errFour
   if (four) {
     log('four', four)
     if (!needsMoreProcessing(four)) {
@@ -75,7 +80,9 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   }
 
   const final = trimQuotes(what.replace(/'/g, '"'))
+  // console.log('final', final)
   const [errFive, five ] = parse(final)
+  error = errFive
   if (five) {
     log('five', five)
     if (!needsMoreProcessing(five)) {
@@ -90,9 +97,27 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     .replace(/:\s?(false+?)\s?/g, ': "FALSE_PLACEHOLDER"')
     // .replace(/\[\s?(true+?)\s?\]/, 'TRUE_PLACEHOLDER')
     // .replace(/\[\s?(false+?)\s?\]/, 'FALSE_PLACEHOLDER')
-    .replace(/\[\s?([A-Za-z]+?)\s?\]/, '[ "$1" ]')
+    // [ xyz ]
+    .replace(/\[\s?([A-Za-z.@_]+?)\s?\]/g, '[ "$1" ]')
+    // [ xyz, 
+    // .replace(/\[\s?([_@.A-Za-z]+?),\s?/g,  '[ "$1",')
+    // .replace(/,\s?([_@.A-Za-z]+?)\s?\]/g, ', "$1" ]')
     .replace(/:\s?([A-Za-z]+?)\s}/g, ': "$1" }')
-  // log('newer', newer)
+
+
+  var pattern = /([^[]+(?=]))/gm
+
+  let updated = newer
+  while((result = pattern.exec(newer)) !== null) {
+    // console.log(result);
+    if (result[0]) {
+      const newText = result[0].replace(/\b([A-Za-z.@_]+?)\b/g, '"$1"')
+      updated = updated.replace(result[0], newText)
+    }
+  }
+  // console.log('xupdated', updated)
+  
+  log('newer', newer)
   // Wrap values missing quotes
   const newerStill = newer
     .replace(/:\s?([A-Za-z]+?)\s?,/g, ': "$1",')
@@ -103,9 +128,10 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     // trailing booleans
 
     
-  // log('newerStill', newerStill)
+  log('newerStill', newerStill)
 
   const [errSeven, six ] = parse(newerStill)
+  error = errSeven
   if (six) {
     log('six', six)
     return six
@@ -116,13 +142,23 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     .replace(/\sfalse"}$/, ' false}')
     .replace(/\strue"}$/, ' true}')
   
-  const [errSix, seven ] = parse(balance)
+  const [errEight, seven ] = parse(balance)
+  error = errEight
   if (seven) {
     log('seven', seven)
     return seven
   }
 
-  throw new Error('Unable to parse JSON')
+  if (newerStill.match(/^"?\[{/) && !newerStill.match(/\}\]$/)) {
+    const [errNine, eight ] = parse(`${newerStill} }]`)
+    error = errNine
+    if (eight) {
+      log('eight', eight)
+      return eight
+    }
+  }
+ 
+  throw new Error(`Unable to parse JSON\n${error}\n\n${input}`)
 }
 
 function fixEscapedKeys(value) {
@@ -140,10 +176,19 @@ function parse(value) {
   return [ error, result ]
 }
 
+// function convertStringObjectToJsonString(str) {
+//   return str.replace(/(\w+:)|(\w+ :)/g, (matchedStr) => {
+//     return '"' + matchedStr.substring(0, matchedStr.length - 1) + '":'
+//   })
+// }
+
 function convertStringObjectToJsonString(str) {
-  return str.replace(/(\w+:)|(\w+ :)/g, (matchedStr) => {
-    return '"' + matchedStr.substring(0, matchedStr.length - 1) + '":'
+  return str.replace(/(\w+\s*(?::))[^:/]/g, (matchedStr) => {
+    const x = matchedStr.substring(0, matchedStr.length - 2)
+    const y = x.trim().replace(/:/, '')
+    return '"' + y + '": '
   })
+  .replace(/""/g, '"').replace(/"'/g, "'")
 }
 
 /*
