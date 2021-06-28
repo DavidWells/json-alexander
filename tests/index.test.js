@@ -129,9 +129,11 @@ test('Javascript strings', t => {
   const zz = parseJSON(`[ 'xyz', 'one', 'two' `)
   t.deepEqual(zz, ['xyz', 'one', 'two'])
 
-  // unblanced array. FAILS
+  // unblanced array.
   const j = parseJSON(`[{ cool: oops, noce: true, wow: false `)
   t.deepEqual(j, [{ cool: "oops", noce: true, wow: false }])
+
+  t.deepEqual(parseJSON(`"{rad:[\"whatever\",\"man\"],cool:{ beans: 'here'"`), { rad: [ 'whatever', 'man' ], cool: { beans: 'here' } })
 })
 
 test('Balance malformed payloads', t => {
@@ -189,6 +191,7 @@ test('Objects', t => {
   t.deepEqual(parseJSON('{rad: {cool:beans }}'),  { rad: { cool: 'beans' } })
   t.deepEqual(parseJSON('{rad: {cool:beans}}'),  { rad: { cool: 'beans' } })
   t.deepEqual(parseJSON('{rad:{cool:beans}}'),  { rad: { cool: 'beans' } })
+
 })
 
 test('Arrays', t => {

@@ -130,8 +130,8 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     // Reset Temporarily stashed boolean values
     .replace(/:\s?("TRUE_PLACEHOLDER"+?)\s?/g, ': true')
     .replace(/:\s?("FALSE_PLACEHOLDER"+?)\s?/g, ': false')
-    // trailing booleans
-
+    // malformed brackets
+    .replace(/}"}$/, '}}')
     
   log('newerStill', newerStill)
 
@@ -179,8 +179,29 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     log('seven', seven)
     return seven
   }
+
+  // Try to balance object brackets
+  if (convert && convert.match(/^{/)) {
+    const leadingBrackets = (convert.match(/{/g) || []).length
+    const trailingBrackets = (convert.match(/}/g) || []).length
+    if (leadingBrackets !== trailingBrackets) {
+      const addBrackets = Math.abs(leadingBrackets - trailingBrackets)
+      const newBrackets = '}'.repeat(addBrackets)
+      const lastTry = `${closeOpenQuote(convert)}${newBrackets}`
+      const [errBracketBalance, bracketBalance ] = parse(lastTry)
+      error = errBracketBalance
+      if (bracketBalance) {
+        log('bracketBalnce', bracketBalance)
+        return bracketBalance
+      }
+    }
+  }
  
   throw new Error(`Unable to parse JSON\n${error}\n\n${input}`)
+}
+
+function closeOpenQuote(str) {
+  return str.replace(/("[^"\]}]+)$/, '$1"')
 }
 
 function fixEscapedKeys(value) {
