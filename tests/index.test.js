@@ -5,13 +5,6 @@ const assert = require('uvu/assert')
 const { parseJSON } = require('../src')
 
 test('baseline JSON', t => {
-  assert.equal(parseJSON(`{
-    color: 'red',
-    whatever: "co'ol",
-  }`), { color: "red", whatever: "co'ol" }, 'works?')
-})
-
-test('baseline JSON', t => {
   // Native
   assert.is(JSON.parse('"lol"'), 'lol')
   // Library
@@ -287,6 +280,73 @@ test('test large broken object', t => {
   const value = parseJSON(data)
   assert.is(typeof value, 'object')
 })
+
+test('Inner quote conflicts', t => {
+  assert.equal(parseJSON(`{
+    color: 'red',
+    whatever: "co'ol",
+  }`), { color: "red", whatever: "co'ol" }, 'works?')
+})
+
+test('JSON with trailing commas', t => {
+  const answer = {
+    "debug": "on",
+    "window": {
+      "title": "Sample Konfabulator Widget",
+      "name": "main_window",
+      "width": 500,
+      "height": 500
+    },
+    "image": {
+      "src": "Images/Sun.png",
+      "name": "sun1",
+      "hOffset": 250,
+      "vOffset": 250,
+      "alignment": "center",
+      "array": ['one', 'two', 'three'],
+    },
+    "text": {
+      "data": "Click Here",
+      "size": 36,
+      "style": "bold",
+      "name": "text1",
+      "hOffset": 250,
+      "vOffset": 100,
+      "alignment": "center",
+      "onMouseUp": "sun1.opacity = (sun1.opacity / 100) * 90;"
+    }
+  }
+  assert.equal(parseJSON(`
+  {
+    "debug": "on",
+    "window": {
+      "title": "Sample Konfabulator Widget",
+      "name": "main_window",
+      "width": 500,
+      "height": 500,
+    },
+    "image": {
+      "src": "Images/Sun.png",
+      "name": "sun1",
+      "hOffset": 250,
+      "vOffset": 250,
+      "alignment": "center",
+      "array": ['one', 'two', 'three'],
+    },
+    "text": {
+      "data": "Click Here",
+      "size": 36,
+      "style": "bold",
+      "name": "text1",
+      "hOffset": 250,
+      "vOffset": 100,
+      "alignment": "center",,,
+      "onMouseUp": "sun1.opacity = (sun1.opacity / 100) * 90;",
+    },
+  },
+  `), answer, 'json')
+})
+
 
 
 test.run()

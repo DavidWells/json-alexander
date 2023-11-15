@@ -3,10 +3,18 @@ const { isBalanced, trimQuotes, isNull } = require('./utils')
 const DEBUG = false
 const log = (DEBUG) ? console.log : () => {} 
 
-// https://regex101.com/r/99mkDt/1 old /(?:,*[^\S]*)+?]$/
-const TRAILING_ARRAY_COMMAS = /(?:,+[^\S]*)+?](,)*\s*/
-// https://regex101.com/r/cy7mLe/4
-const TRAILING_OBJECT_COMMAS = /(?:,[^\S]*)*(})(,*)\s*$/
+// https://regex101.com/r/hos7d8/1
+const TRAILING_JSON_COMMAS = /([}\]]),+(\s*),*(\s*)$/
+
+const TOO_MANY_TRAILING = /(["}\]]),{2,}$/gm
+
+const TRAILING_ARRAY = /(,+[^\S]*)*(])(,+)\s*/g
+// https://regex101.com/r/XHmshu/1
+const TRAILING_ARRAY_LAST = /(,+[^\S]*)*(])(,+)\s*([}\]])/g
+
+const TRAILING_OBJECT = /(,[^\S]*)*(})(,+)\s*/g
+// https://regex101.com/r/7LCYou/1
+const TRAILING_OBJECT_LAST = /(,+[^\S]*)*(\})?(,+)\s*([}\]])/g
 
 module.exports.safeParse = function simpleParse(data, defaultValue) {
   try {
@@ -71,10 +79,6 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   if (trimmed.indexOf("'") > -1 && SINGLE_IN_DOUBLE_QUOTE_RE.test(trimmed)) {
     trimmed = trimmed.replace(SINGLE_IN_DOUBLE_QUOTE_RE, '__INNER_SINGLE__')
   }
-
-  trimmed = trimmed
-    .replace(TRAILING_ARRAY_COMMAS, ']')
-    .replace(TRAILING_OBJECT_COMMAS, '}')
 
   log('trimmed clean ', `|${trimmed}|`)
 
@@ -241,7 +245,14 @@ function fixEscapedKeys(value) {
 }
 
 function clean(str) {
-  return str.replace(/__INNER_SINGLE__/g, "'")
+  return str
+    .replace(/__INNER_SINGLE__/g, "'")
+    .replace(TOO_MANY_TRAILING,'$1,')
+    .replace(TRAILING_JSON_COMMAS, '$1')
+    .replace(TRAILING_ARRAY_LAST, '$2$4')
+    .replace(TRAILING_OBJECT_LAST, '$2$4')
+    // .replace(TRAILING_ARRAY, '$2,')
+    // .replace(TRAILING_OBJECT, '$2,')
 }
 
 function parse(value) {
