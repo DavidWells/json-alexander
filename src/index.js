@@ -3,6 +3,11 @@ const { isBalanced, trimQuotes, isNull } = require('./utils')
 const DEBUG = false
 const log = (DEBUG) ? console.log : () => {} 
 
+// https://regex101.com/r/99mkDt/1 old /(?:,*[^\S]*)+?]$/
+const TRAILING_ARRAY_COMMAS = /(?:,+[^\S]*)+?](,)*\s*/
+// https://regex101.com/r/cy7mLe/4
+const TRAILING_OBJECT_COMMAS = /(?:,[^\S]*)*(})(,*)\s*$/
+
 module.exports.safeParse = function simpleParse(data, defaultValue) {
   try {
     if (isNull(data) && defaultValue) {
@@ -16,6 +21,16 @@ module.exports.safeParse = function simpleParse(data, defaultValue) {
     return defaultValue
   }
 }
+
+function replaceInnerCharPattern(char = '\\s', open, close, repeat = 0, flags) {
+  // og /\s(?=(?:(?:[^"]*(?:")){2})*[^"]*(?:")[^"]*$)/g
+  const repeatVal = (repeat) ? `{${repeat}}` : ''
+  // const o = (allSpace) ? '' : open
+  const o = open
+  const f = flags || 'g'
+  return new RegExp(`${char}(?=(?:(?:[^${open}]*(?:${open}))${repeatVal})*[^${o}]*(?:${close})[^${close}]*$)`, f)
+}
+
 
 module.exports.parseJSON = function parseJSON(input, defaultValue) {
   let error
@@ -37,7 +52,7 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     return isNumber
   }
   
-  const [err, first ] = parse(value)
+  const [ err, first ] = parse(value)
   error = err
   // log('trimmed', trimmed)
   if (first) {
@@ -47,20 +62,34 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     }
   }
 
-  const trimmed = trimQuotes(value)
-  // log('trimmed', trimmed)
+  let trimmed = trimQuotes(value)
+  log('trimmed', `|${trimmed}|`)
+
+  // const DOUBLE_IN_SINGLE_QUOTE_RE = replaceInnerCharPattern('"', "'", "'", 2)
+  const SINGLE_IN_DOUBLE_QUOTE_RE = replaceInnerCharPattern("'", '"', '"', 2)
+  
+  if (trimmed.indexOf("'") > -1 && SINGLE_IN_DOUBLE_QUOTE_RE.test(trimmed)) {
+    trimmed = trimmed.replace(SINGLE_IN_DOUBLE_QUOTE_RE, '__INNER_SINGLE__')
+  }
+
+  trimmed = trimmed
+    .replace(TRAILING_ARRAY_COMMAS, ']')
+    .replace(TRAILING_OBJECT_COMMAS, '}')
+
+  log('trimmed clean ', `|${trimmed}|`)
+
   const [errTwo, second ] = parse(trimmed)
   error = errTwo
   if (second) {
-    log('second', second)
+    log('second', `|${second}|`)
     if (!needsMoreProcessing(second)) {
       return second
     }
   }
 
-  const fixString = convertStringObjectToJsonString(trimmed)
+  let fixString = convertStringObjectToJsonString(trimmed)
   //*
-  log('fixString', fixString)
+  log('fixString', `|${fixString}|`)
   /**/
   const [errThree, third ] = parse(fixString)
   error = errThree
@@ -73,8 +102,9 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
 
   const foo = coerceStr(fixString, defaultValue)
   log('foo', foo)
-  const what = fixEscapedKeys(foo)
+  let what = fixEscapedKeys(foo)
   log('what', what)
+
   const [errFour, four ] = parse(what)
   error = errFour
   if (four) {
@@ -110,16 +140,16 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     .replace(/:\s?([A-Za-z]+?)\s?}/g, ': "$1" }')
 
 
-  var pattern = /([^[]+(?=]))/gm
+  // var pattern = /([^[]+(?=]))/gm
 
-  let updated = newer
-  while((result = pattern.exec(newer)) !== null) {
-    // console.log(result);
-    if (result[0]) {
-      const newText = result[0].replace(/\b([A-Za-z.@_]+?)\b/g, '"$1"')
-      updated = updated.replace(result[0], newText)
-    }
-  }
+  // let updated = newer
+  // while((result = pattern.exec(newer)) !== null) {
+  //   // console.log(result);
+  //   if (result[0]) {
+  //     const newText = result[0].replace(/\b([A-Za-z.@_]+?)\b/g, '"$1"')
+  //     updated = updated.replace(result[0], newText)
+  //   }
+  // }
   // console.log('xupdated', updated)
   
   log('newer', newer)
@@ -200,6 +230,8 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   throw new Error(`Unable to parse JSON\n${error}\n\n${input}`)
 }
 
+
+
 function closeOpenQuote(str) {
   return str.replace(/("[^"\]}]+)$/, '$1"')
 }
@@ -208,10 +240,14 @@ function fixEscapedKeys(value) {
   return value.replace(/\s?\\"/g, '"').replace(/\\"\:/, '":')
 }
 
+function clean(str) {
+  return str.replace(/__INNER_SINGLE__/g, "'")
+}
+
 function parse(value) {
   let result, error
   try {
-    result = JSON.parse(value)
+    result = JSON.parse(clean(value))
   } catch (err) {
     // log('err', err)
     error = err

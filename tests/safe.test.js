@@ -1,27 +1,28 @@
-import test from 'ava'
-import { safeParse } from '../src'
+const { test } = require('uvu')
+const assert = require('uvu/assert')
+const { safeParse } = require('../src')
 
 test('Safe empty parse', t => {
   var empty = safeParse('')
-  t.is(empty, undefined)
+  assert.is(empty, undefined)
 
   var emptyTwo = safeParse(null)
-  t.deepEqual(emptyTwo, null)
+  assert.equal(emptyTwo, null)
 
   var emptyThree = safeParse(undefined)
-  t.deepEqual(emptyThree, undefined)
+  assert.equal(emptyThree, undefined)
 })
 
 test('Safe objects', t => {
-  t.deepEqual(safeParse("{'hi': 'cool'}"), undefined)
+  assert.equal(safeParse("{'hi': 'cool'}"), undefined)
 
-  t.deepEqual(safeParse("{'lol': 'whate\"ver'}"), undefined)
+  assert.equal(safeParse("{'lol': 'whate\"ver'}"), undefined)
 
-  t.deepEqual(safeParse("{'lol': 'hey\"there'}"), undefined)
+  assert.equal(safeParse("{'lol': 'hey\"there'}"), undefined)
 
-  t.deepEqual(safeParse({ what: 'hi' }), { what: 'hi' })
+  assert.equal(safeParse({ what: 'hi' }), { what: 'hi' })
 
-  t.deepEqual(safeParse({
+  assert.equal(safeParse({
     what: 'hi',
     array: ['cool', 'awesome']
   }), {
@@ -31,11 +32,11 @@ test('Safe objects', t => {
 })
 
 test('Safe javascript natives', t => {
-  t.deepEqual(safeParse(['lol']), ['lol'])
+  assert.equal(safeParse(['lol']), ['lol'])
 
-  t.deepEqual(safeParse({ what: 'hi' }), { what: 'hi' })
+  assert.equal(safeParse({ what: 'hi' }), { what: 'hi' })
 
-  t.deepEqual(safeParse({
+  assert.equal(safeParse({
     what: 'hi',
     array: ['cool', 'awesome']
   }), {
@@ -43,7 +44,10 @@ test('Safe javascript natives', t => {
     array: ['cool', 'awesome']
   })
 
-  t.deepEqual(safeParse(true), true)
+  assert.equal(safeParse(true), true)
 
-  t.deepEqual(safeParse(false), false)
+  assert.equal(safeParse(false), false)
 })
+
+
+test.run()
