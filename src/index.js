@@ -3,6 +3,7 @@ const { isBalanced, trimQuotes, isNull } = require('./utils')
 const DEBUG = false
 const log = (DEBUG) ? console.log : () => {} 
 
+
 // https://regex101.com/r/hos7d8/1
 const TRAILING_JSON_COMMAS = /([}\]]),+(\s*),*(\s*)$/
 
