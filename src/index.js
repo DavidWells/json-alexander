@@ -1,4 +1,3 @@
-const { is } = require('uvu/assert')
 const { isBalanced, trimQuotes, isNull } = require('./utils')
 
 const DEBUG = false
