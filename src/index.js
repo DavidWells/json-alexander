@@ -1,3 +1,4 @@
+const { is } = require('uvu/assert')
 const { isBalanced, trimQuotes, isNull } = require('./utils')
 
 const DEBUG = false
@@ -16,7 +17,7 @@ const TRAILING_OBJECT = /(,[^\S]*)*(})(,+)\s*/g
 // https://regex101.com/r/7LCYou/1
 const TRAILING_OBJECT_LAST = /(,+[^\S]*)*(\})?(,+)\s*([}\]])/g
 
-module.exports.safeParse = function simpleParse(data, defaultValue) {
+function simpleParse(data, defaultValue) {
   try {
     if (isNull(data) && defaultValue) {
       return defaultValue
@@ -29,6 +30,8 @@ module.exports.safeParse = function simpleParse(data, defaultValue) {
     return defaultValue
   }
 }
+
+module.exports.safeParse = simpleParse
 
 function replaceInnerCharPattern(char = '\\s', open, close, repeat = 0, flags) {
   // og /\s(?=(?:(?:[^"]*(?:")){2})*[^"]*(?:")[^"]*$)/g
@@ -44,6 +47,13 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   let error
   if (isNull(input) || input === '' || input === undefined) {
     return defaultValue || input
+  }
+
+  if (typeof input === 'string') {
+    const simple = simpleParse(input)
+    if (simple) {
+      return simple
+    }
   }
 
   const value = (typeof input === 'string') ? coerceStr(input, defaultValue) : coerceToString(input)

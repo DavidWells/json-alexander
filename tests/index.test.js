@@ -237,7 +237,7 @@ test('Arrays', t => {
 
   const x = parseJSON("['arr", [])
   // console.log('thing', x)
-  assert.equal(x, ['arr'])
+  assert.equal(x, ['arr'], 'works?')
   assert.is(Array.isArray(x), true)
 })
 
