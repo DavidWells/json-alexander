@@ -1,6 +1,6 @@
 {
   "name": "json-alexander",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Serenity Now! Forgiving JSON parser",
   "main": "src/index.js",
   "scripts": {
