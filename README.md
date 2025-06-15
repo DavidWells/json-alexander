@@ -1,7 +1,5 @@
 # Forgiving JSON Parser
 
-<img align="right" src="https://user-images.githubusercontent.com/532272/64802133-d3d2b180-d53e-11e9-8182-101a1b927e29.jpg">
-
 Serenity now! A forgiving JSON parser 🙏
 
 ```js
@@ -27,6 +25,8 @@ parseJSON('{"unbalanced": "object"')
 parseJSON('{ hello: there }')
 // -> { "hello": "there" }
 ```
+
+<img src="https://user-images.githubusercontent.com/532272/64802133-d3d2b180-d53e-11e9-8182-101a1b927e29.jpg">
 
 Throws if value passed in is not parsable.
 
