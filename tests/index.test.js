@@ -39,6 +39,15 @@ test('baseline JSON', t => {
   assert.is(typeof boolTwoLib, 'string')
 })
 
+test('Strict JSON falsy values', t => {
+  assert.is(parseJSON('null'), null)
+  assert.is(parseJSON('0'), 0)
+  assert.is(parseJSON('""'), '')
+  assert.is(parseJSON('false'), false)
+  assert.equal(parseJSON('[]'), [])
+  assert.equal(parseJSON('{}'), {})
+})
+
 test('empty parse', t => {
   var empty = parseJSON('')
   assert.is(empty, '')
@@ -72,6 +81,14 @@ test('Strings', t => {
   assert.is(parseJSON("'lol"), 'lol')
 
   assert.is(parseJSON("lol'"), 'lol')
+})
+
+test('Quoted strings preserve content', t => {
+  assert.is(parseJSON('"hello world"'), 'hello world')
+  assert.is(parseJSON('"// not a comment"'), '// not a comment')
+  assert.is(parseJSON('"/* not a comment */"'), '/* not a comment */')
+  assert.is(parseJSON('"# not a comment"'), '# not a comment')
+  assert.is(parseJSON('"one\\ntwo"'), 'one\ntwo')
 })
 
 test('Javascript natives', t => {
@@ -195,6 +212,35 @@ test('Objects', t => {
 
 })
 
+test('Object primitive values', t => {
+  assert.equal(parseJSON('{ nil: null, falsy: false, zero: 0, empty: "" }'), {
+    nil: null,
+    falsy: false,
+    zero: 0,
+    empty: ''
+  })
+
+  assert.equal(parseJSON('{ neg: -1, float: -1.5, sci: 1e3 }'), {
+    neg: -1,
+    float: -1.5,
+    sci: 1000
+  })
+
+  assert.equal(parseJSON('{ quotedNull: "null", quotedFalse: "false", quotedZero: "0" }'), {
+    quotedNull: 'null',
+    quotedFalse: 'false',
+    quotedZero: '0'
+  })
+})
+
+test('Object keys with punctuation and spaces', t => {
+  assert.equal(parseJSON(`{"a-b": 1, '$weird': two, " spaced ": three}`), {
+    'a-b': 1,
+    '$weird': 'two',
+    ' spaced ': 'three'
+  })
+})
+
 test('Objects with loose nested arrays', t => {
   assert.equal(parseJSON(`{
     sessionId: /dev/ttys129,
@@ -219,6 +265,18 @@ test('Objects with loose nested arrays', t => {
       ['one', 'two', 3]
     ],
     path: '/dev/ttys129'
+  })
+})
+
+test('Objects preserve URL-like bare values', t => {
+  assert.equal(parseJSON(`{
+    url: https://example.com?a=1&b=2,
+    path: /dev/ttys129,
+    glob: /**/**.md/
+  }`), {
+    url: 'https://example.com?a=1&b=2',
+    path: '/dev/ttys129',
+    glob: '/**/**.md/'
   })
 })
 
@@ -265,6 +323,14 @@ test('Objects trailing commas', t => {
   })
 })
 
+test('Objects with repeated interior commas', t => {
+  assert.equal(parseJSON('{ a: 1,, b: 2, c: { d: 3,,, }, }'), {
+    a: 1,
+    b: 2,
+    c: { d: 3 }
+  })
+})
+
 test('Arrays', t => {
   assert.equal(parseJSON('["arritem"]'), ['arritem'])
 
@@ -292,6 +358,36 @@ test('Arrays', t => {
   assert.is(Array.isArray(x), true)
 })
 
+test('Arrays with primitive values', t => {
+  assert.equal(parseJSON('[null, false, true, 0, "", "null", "false"]'), [
+    null,
+    false,
+    true,
+    0,
+    '',
+    'null',
+    'false'
+  ])
+})
+
+test('Arrays preserve quoted delimiters', t => {
+  assert.equal(parseJSON('["a,b", "c]d", "e{f}", "// nope", "/* nope */"]'), [
+    'a,b',
+    'c]d',
+    'e{f}',
+    '// nope',
+    '/* nope */'
+  ])
+})
+
+test('Nested arrays and objects', t => {
+  assert.equal(parseJSON('[one, [two, 3], { four: [five, { six: true }] }]'), [
+    'one',
+    ['two', 3],
+    { four: ['five', { six: true }] }
+  ])
+})
+
 test('Arrays trailing commas', t => {
   assert.equal(parseJSON("['one', 'two', 'three'],"), ['one', 'two', 'three'])
   assert.equal(parseJSON("['one', 'two', 'three',]"), ['one', 'two', 'three'])
@@ -299,6 +395,13 @@ test('Arrays trailing commas', t => {
   assert.equal(parseJSON("['one', 'two', 'three',,,,]"), ['one', 'two', 'three'])
   assert.equal(parseJSON("['one', 'two', 'three'],,,,"), ['one', 'two', 'three'])
   assert.equal(parseJSON("['one', 'two', 'three',,,,],,,,"), ['one', 'two', 'three'])
+})
+
+test('Nested trailing commas', t => {
+  assert.equal(parseJSON('{ a: [1, 2,], b: { c: 3, }, }'), {
+    a: [1, 2],
+    b: { c: 3 }
+  })
 })
 
 test('Booleans', t => {
@@ -317,6 +420,21 @@ test('Booleans', t => {
   var e3 = parseJSON('true')
   assert.is(e3, true)
   assert.is(typeof e3, 'boolean')
+})
+
+test('Null values', t => {
+  assert.is(parseJSON(null), null)
+  assert.is(parseJSON('null'), null)
+  assert.equal(parseJSON('{ key: null }'), { key: null })
+  assert.equal(parseJSON('[null]'), [null])
+})
+
+test('Number values', t => {
+  assert.is(parseJSON(0), 0)
+  assert.is(parseJSON('0'), 0)
+  assert.is(parseJSON('-10'), -10)
+  assert.is(parseJSON('1.25'), 1.25)
+  assert.is(parseJSON('1e3'), 1000)
 })
 
 test('test large object', t => {

@@ -13,6 +13,19 @@ test('Safe empty parse', t => {
   assert.equal(emptyThree, undefined)
 })
 
+test('Safe strict falsy values', t => {
+  assert.is(safeParse('null'), null)
+  assert.is(safeParse('0'), 0)
+  assert.is(safeParse('""'), '')
+  assert.is(safeParse('false'), false)
+})
+
+test('Safe defaults for invalid input', t => {
+  assert.is(safeParse('not json', 'fallback'), 'fallback')
+  assert.equal(safeParse('not json', []), [])
+  assert.equal(safeParse('not json', {}), {})
+})
+
 test('Safe objects', t => {
   assert.equal(safeParse("{'hi': 'cool'}"), undefined)
 

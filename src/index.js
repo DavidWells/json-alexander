@@ -27,10 +27,9 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   }
 
   if (typeof input === 'string') {
-    const simple = simpleParse(input)
-    if (simple) {
-      return simple
-    }
+    try {
+      return JSON.parse(input)
+    } catch (e) {}
   }
 
   const value = (typeof input === 'string') ? coerceStr(input, defaultValue) : coerceToString(input)
