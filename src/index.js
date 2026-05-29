@@ -83,6 +83,11 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   let trimmed = trimQuotes(value)
   log('trimmed', `|${trimmed}|`)
 
+  const loose = parseLooseContainer(trimmed)
+  if (loose.ok) {
+    return loose.value
+  }
+
   // const DOUBLE_IN_SINGLE_QUOTE_RE = replaceInnerCharPattern('"', "'", "'", 2)
   const SINGLE_IN_DOUBLE_QUOTE_RE = replaceInnerCharPattern("'", '"', '"', 2)
   
@@ -274,6 +279,263 @@ function parse(value) {
     error = err
   }
   return [ error, result ]
+}
+
+function parseLooseContainer(value) {
+  if (typeof value !== 'string') {
+    return { ok: false }
+  }
+
+  const parser = new LooseParser(value)
+  return parser.parse()
+}
+
+class LooseParser {
+  constructor(input) {
+    this.input = input
+    this.index = 0
+  }
+
+  parse() {
+    this.skipWhitespace()
+    const char = this.peek()
+    if (char !== '{' && char !== '[') {
+      return { ok: false }
+    }
+
+    try {
+      const value = this.parseValue()
+      this.skipWhitespace()
+      return { ok: true, value }
+    } catch (e) {
+      return { ok: false, error: e }
+    }
+  }
+
+  parseValue() {
+    this.skipWhitespace()
+    const char = this.peek()
+    if (char === '{') return this.parseObject()
+    if (char === '[') return this.parseArray()
+    if (char === '"' || char === "'") return this.parseString()
+    return this.parseBareValue()
+  }
+
+  parseObject() {
+    const obj = {}
+    this.index++
+
+    while (this.index < this.input.length) {
+      this.skipWhitespace()
+      if (this.peek() === ',') {
+        this.index++
+        continue
+      }
+      if (this.peek() === '}') {
+        this.index++
+        return obj
+      }
+
+      const key = this.parseKey()
+      this.skipWhitespace()
+      if (this.peek() !== ':') {
+        throw new Error('Expected object colon')
+      }
+      this.index++
+      obj[key] = this.parseValue()
+
+      this.skipWhitespace()
+      if (this.peek() === ',') {
+        this.index++
+        continue
+      }
+      if (this.peek() === '}') {
+        this.index++
+        return obj
+      }
+    }
+
+    return obj
+  }
+
+  parseArray() {
+    const arr = []
+    this.index++
+
+    while (this.index < this.input.length) {
+      this.skipWhitespace()
+      if (this.peek() === ',') {
+        if (this.isSparseArraySlot()) {
+          arr.push('')
+        }
+        this.index++
+        continue
+      }
+      if (this.peek() === ']') {
+        this.index++
+        return arr
+      }
+
+      arr.push(this.parseValue())
+
+      this.skipWhitespace()
+      if (this.peek() === ',') {
+        this.index++
+        continue
+      }
+      if (this.peek() === ']') {
+        this.index++
+        return arr
+      }
+    }
+
+    return arr
+  }
+
+  parseKey() {
+    this.skipWhitespace()
+    const char = this.peek()
+    if (char === '"' || char === "'") {
+      return this.parseString()
+    }
+    return this.readUntil([':', '\n', '\r']).trim()
+  }
+
+  parseString() {
+    const quote = this.peek()
+    let value = ''
+    let curlyDepth = 0
+    let arrayDepth = 0
+    let parenDepth = 0
+    this.index++
+
+    while (this.index < this.input.length) {
+      const char = this.input[this.index]
+      if (char === '\\') {
+        this.index++
+        if (this.index < this.input.length) {
+          value += this.unescapeCharacter(this.input[this.index])
+          this.index++
+        }
+        continue
+      }
+      if (char === quote && curlyDepth === 0 && arrayDepth === 0 && parenDepth === 0) {
+        this.index++
+        return value
+      }
+      if (char === '{') curlyDepth++
+      else if (char === '}' && curlyDepth) curlyDepth--
+      else if (char === '[') arrayDepth++
+      else if (char === ']' && arrayDepth) arrayDepth--
+      else if (char === '(') parenDepth++
+      else if (char === ')' && parenDepth) parenDepth--
+      value += char
+      this.index++
+    }
+
+    return value
+  }
+
+  parseBareValue() {
+    const raw = this.readBareToken().trim()
+    if (raw === '') return ''
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+    if (raw === 'null') return null
+
+    const number = Number(raw)
+    if (!isNaN(number)) {
+      return number
+    }
+
+    return raw
+  }
+
+  readBareToken() {
+    let quote = ''
+    let curlyDepth = 0
+    let arrayDepth = 0
+    let value = ''
+
+    while (this.index < this.input.length) {
+      const char = this.input[this.index]
+
+      if (quote) {
+        value += char
+        if (char === '\\') {
+          this.index++
+          if (this.index < this.input.length) {
+            value += this.input[this.index]
+          }
+        } else if (char === quote) {
+          quote = ''
+        }
+        this.index++
+        continue
+      }
+
+      if (char === '"' || char === "'") {
+        quote = char
+        value += char
+        this.index++
+        continue
+      }
+
+      if (char === '{') curlyDepth++
+      else if (char === '}' && curlyDepth) curlyDepth--
+      else if (char === '[') arrayDepth++
+      else if (char === ']' && arrayDepth) arrayDepth--
+
+      if (
+        curlyDepth === 0 &&
+        arrayDepth === 0 &&
+        (char === ',' || char === '}' || char === ']')
+      ) {
+        break
+      }
+
+      value += char
+      this.index++
+    }
+
+    return value
+  }
+
+  readUntil(stops) {
+    let value = ''
+    while (this.index < this.input.length && !stops.includes(this.input[this.index])) {
+      value += this.input[this.index]
+      this.index++
+    }
+    return value
+  }
+
+  skipWhitespace() {
+    while (/\s/.test(this.peek())) {
+      this.index++
+    }
+  }
+
+  peek() {
+    return this.input[this.index]
+  }
+
+  isSparseArraySlot() {
+    let next = this.index + 1
+    while (/\s/.test(this.input[next])) {
+      next++
+    }
+    return this.input[next] !== ',' && this.input[next] !== ']'
+  }
+
+  unescapeCharacter(char) {
+    if (char === 'n') return '\n'
+    if (char === 'r') return '\r'
+    if (char === 't') return '\t'
+    if (char === 'b') return '\b'
+    if (char === 'f') return '\f'
+    return char
+  }
 }
 
 // function convertStringObjectToJsonString(str) {

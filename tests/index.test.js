@@ -195,6 +195,55 @@ test('Objects', t => {
 
 })
 
+test('Objects with loose nested arrays', t => {
+  assert.equal(parseJSON(`{
+    sessionId: /dev/ttys129,
+    sessionIndex: 1.10,
+    cool: true,
+    notCool: false,
+    array: [1, 2, 3]
+  }`), {
+    sessionId: '/dev/ttys129',
+    sessionIndex: 1.1,
+    cool: true,
+    notCool: false,
+    array: [1, 2, 3]
+  })
+
+  assert.equal(parseJSON(`{
+    nested: [{ cool: beans }, [one, two, 3]],
+    path: /dev/ttys129
+  }`), {
+    nested: [
+      { cool: 'beans' },
+      ['one', 'two', 3]
+    ],
+    path: '/dev/ttys129'
+  })
+})
+
+test('Loose strings with nested quoted object text', t => {
+  assert.equal(parseJSON(`[
+    {
+      type: "content",
+      content: "Content here...
+
+<Builder
+  components={[{ type: "content", content: "Content here... woah" }]}
+/>"
+    }
+  ]`), [
+    {
+      type: 'content',
+      content: `Content here...
+
+<Builder
+  components={[{ type: "content", content: "Content here... woah" }]}
+/>`
+    }
+  ])
+})
+
 test('Objects trailing commas', t => {
   assert.equal(parseJSON("{'hi': 'cool',}"), {
     hi: 'cool'
@@ -232,6 +281,8 @@ test('Arrays', t => {
   assert.equal(parseJSON("[a, b, 2, 3]"), ['a', 'b', 2, 3])
 
   assert.equal(parseJSON("[a, b, { cool: true }]"), ['a', 'b', { cool: true }])
+
+  assert.equal(parseJSON("[1,,3]"), [1, '', 3])
 
   // assert.equal(parseJSON(`[a, b, ["1", "2"]]`), ['a', 'b', ['1', '2']])
 
