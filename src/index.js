@@ -4,19 +4,6 @@ const DEBUG = false
 const log = (DEBUG) ? console.log : () => {} 
 
 
-// https://regex101.com/r/hos7d8/1
-const TRAILING_JSON_COMMAS = /([}\]]),+(\s*),*(\s*)$/
-
-const TOO_MANY_TRAILING = /(["}\]]),{2,}$/gm
-
-const TRAILING_ARRAY = /(,+[^\S]*)*(])(,+)\s*/g
-// https://regex101.com/r/XHmshu/1
-const TRAILING_ARRAY_LAST = /(,+[^\S]*)*(])(,+)\s*([}\]])/g
-
-const TRAILING_OBJECT = /(,[^\S]*)*(})(,+)\s*/g
-// https://regex101.com/r/7LCYou/1
-const TRAILING_OBJECT_LAST = /(,+[^\S]*)*(\})?(,+)\s*([}\]])/g
-
 function simpleParse(data, defaultValue) {
   try {
     if (isNull(data) && defaultValue) {
@@ -32,16 +19,6 @@ function simpleParse(data, defaultValue) {
 }
 
 module.exports.safeParse = simpleParse
-
-function replaceInnerCharPattern(char = '\\s', open, close, repeat = 0, flags) {
-  // og /\s(?=(?:(?:[^"]*(?:")){2})*[^"]*(?:")[^"]*$)/g
-  const repeatVal = (repeat) ? `{${repeat}}` : ''
-  // const o = (allSpace) ? '' : open
-  const o = open
-  const f = flags || 'g'
-  return new RegExp(`${char}(?=(?:(?:[^${open}]*(?:${open}))${repeatVal})*[^${o}]*(?:${close})[^${close}]*$)`, f)
-}
-
 
 module.exports.parseJSON = function parseJSON(input, defaultValue) {
   let error
@@ -69,6 +46,14 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
   if (typeof isNumber === 'number' && !isNaN(isNumber)) {
     return isNumber
   }
+
+  let trimmed = trimQuotes(value)
+  log('trimmed', `|${trimmed}|`)
+
+  const loose = parseLooseContainer(trimmed)
+  if (loose.ok) {
+    return loose.value
+  }
   
   const [ err, first ] = parse(value)
   error = err
@@ -80,19 +65,8 @@ module.exports.parseJSON = function parseJSON(input, defaultValue) {
     }
   }
 
-  let trimmed = trimQuotes(value)
-  log('trimmed', `|${trimmed}|`)
-
-  const loose = parseLooseContainer(trimmed)
-  if (loose.ok) {
-    return loose.value
-  }
-
-  // const DOUBLE_IN_SINGLE_QUOTE_RE = replaceInnerCharPattern('"', "'", "'", 2)
-  const SINGLE_IN_DOUBLE_QUOTE_RE = replaceInnerCharPattern("'", '"', '"', 2)
-  
-  if (trimmed.indexOf("'") > -1 && SINGLE_IN_DOUBLE_QUOTE_RE.test(trimmed)) {
-    trimmed = trimmed.replace(SINGLE_IN_DOUBLE_QUOTE_RE, '__INNER_SINGLE__')
+  if (trimmed.indexOf("'") > -1 && trimmed.indexOf('"') > -1) {
+    trimmed = replaceSingleQuotesInsideDoubleQuotes(trimmed)
   }
 
   log('trimmed clean ', `|${trimmed}|`)
@@ -259,15 +233,134 @@ function fixEscapedKeys(value) {
   return value.replace(/\s?\\"/g, '"').replace(/\\"\:/, '":')
 }
 
+function replaceSingleQuotesInsideDoubleQuotes(str) {
+  let output = ''
+  let inDoubleQuote = false
+  let escape = false
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i]
+
+    if (escape) {
+      output += char
+      escape = false
+      continue
+    }
+
+    if (char === '\\') {
+      output += char
+      escape = true
+      continue
+    }
+
+    if (char === '"') {
+      inDoubleQuote = !inDoubleQuote
+      output += char
+      continue
+    }
+
+    output += inDoubleQuote && char === "'" ? '__INNER_SINGLE__' : char
+  }
+
+  return output
+}
+
 function clean(str) {
+  return stripDanglingCommas(str.replace(/__INNER_SINGLE__/g, "'"))
+}
+
+function stripDanglingCommas(str) {
+  let output = ''
+  let quote = ''
+  let escape = false
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i]
+
+    if (quote) {
+      output += char
+      if (escape) {
+        escape = false
+      } else if (char === '\\') {
+        escape = true
+      } else if (char === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char
+      output += char
+      continue
+    }
+
+    if (char === '}' || char === ']') {
+      output = removeTrailingCommaRun(output)
+    }
+
+    output += char
+  }
+
+  return removeCommasAfterFinalClose(output)
+}
+
+function removeTrailingCommaRun(str) {
+  let end = str.length
+  while (end > 0 && isWhitespace(str[end - 1])) {
+    end--
+  }
+
+  let start = end
+  let foundComma = false
+  while (start > 0) {
+    if (str[start - 1] === ',') {
+      foundComma = true
+      start--
+      while (start > 0 && isWhitespace(str[start - 1])) {
+        start--
+      }
+      continue
+    }
+    break
+  }
+
+  if (!foundComma) {
+    return str
+  }
+
+  return str.slice(0, start)
+}
+
+function removeCommasAfterFinalClose(str) {
+  let end = str.length
+  while (end > 0 && isWhitespace(str[end - 1])) {
+    end--
+  }
+
+  let cursor = end
+  let foundComma = false
+  while (cursor > 0) {
+    if (str[cursor - 1] === ',') {
+      foundComma = true
+      cursor--
+      while (cursor > 0 && isWhitespace(str[cursor - 1])) {
+        cursor--
+      }
+      continue
+    }
+    break
+  }
+
+  if (foundComma && (str[cursor - 1] === '}' || str[cursor - 1] === ']')) {
+    return str.slice(0, cursor)
+  }
+
   return str
-    .replace(/__INNER_SINGLE__/g, "'")
-    .replace(TOO_MANY_TRAILING,'$1,')
-    .replace(TRAILING_JSON_COMMAS, '$1')
-    .replace(TRAILING_ARRAY_LAST, '$2$4')
-    .replace(TRAILING_OBJECT_LAST, '$2$4')
-    // .replace(TRAILING_ARRAY, '$2,')
-    // .replace(TRAILING_OBJECT, '$2,')
+}
+
+function isWhitespace(char) {
+  return char === ' ' || char === '\n' || char === '\r' || char === '\t'
 }
 
 function parse(value) {
@@ -511,7 +604,7 @@ class LooseParser {
   }
 
   skipWhitespace() {
-    while (/\s/.test(this.peek())) {
+    while (isWhitespace(this.peek())) {
       this.index++
     }
   }
@@ -522,7 +615,7 @@ class LooseParser {
 
   isSparseArraySlot() {
     let next = this.index + 1
-    while (/\s/.test(this.input[next])) {
+    while (isWhitespace(this.input[next])) {
       next++
     }
     return this.input[next] !== ',' && this.input[next] !== ']'
@@ -634,49 +727,41 @@ function coerceStr(str, defaultReturn) {
 }
 
 function invertQuotes(str, quoteType, objectType) {
-  // log('Original', str)
-  // const replaceOuterQuotes = new RegExp(`(${quoteType})(?=(?:[^${quoteType}]|${quoteType}[^]*${quoteType})*)`, 'g')
-  // log('replaceOuterQuotes', replaceOuterQuotes)
-  const quotePairsRegex = new RegExp(`${quoteType}[^\\\\${quoteType}]*(\\\\${quoteType}[^\\\\${quoteType}]*)*${quoteType}`, 'g')
-
-  const quotePairs = str.match(quotePairsRegex)
-  if (!quotePairs) {
-    return str
-  }
-  const redactedOuter = cleanInner(str, quotePairs, quoteType)
-  const redactedString = redactedOuter
-    .replace(/'/g, 'INNERSINGLEQUOTE')
-    .replace(/"/g, 'INNERDOUBLEQUOTE')
-  // log('redactedString', redactedString)
   const repInner = (objectType === 'array') ? '"' : `\\"`
-  const fixed = redactedString
-    .replace(/OUTERDOUBLEQUOTE|OUTERSINGLEQUOTE/g, '"')
-    .replace(/INNERSINGLEQUOTE/g, `'`)
-    .replace(/INNERDOUBLEQUOTE/g, repInner)
-  // log('fixed', fixed)
-  return fixed
-}
+  let output = ''
+  let inQuotePair = false
+  let escape = false
 
-function cleanInner(str, pairs, quoteType) {
-  const word = (quoteType === '"') ? 'OUTERDOUBLEQUOTE' : 'OUTERSINGLEQUOTE'
-  const inverse = (quoteType === '"') ? "'" : '"'
-  return pairs.reduce((acc, curr) => {
-    const replaceInnerConflict = new RegExp(`${quoteType}`, 'g')
-    // log('replaceInnerConflict', replaceInnerConflict)
-    const replaceInverseStart = new RegExp(`^${inverse}`)
-    // log('replaceInverseStart', replaceInverseStart)
-    const replaceInverseEnd = new RegExp(`${inverse}$`)
-    // log('replaceInverseEnd', replaceInverseEnd)
-    const fix = curr
-      // replace inner "
-      .replace(replaceInnerConflict, `${word}`)
-      // replace beginning quote
-      .replace(replaceInverseStart, quoteType)
-      // replace ending quote
-      .replace(replaceInverseEnd, quoteType)
-    acc = acc.replace(curr, fix)
-    return acc
-  }, str)
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i]
+
+    if (escape) {
+      output += char
+      escape = false
+      continue
+    }
+
+    if (char === '\\') {
+      output += char
+      escape = true
+      continue
+    }
+
+    if (char === quoteType) {
+      inQuotePair = !inQuotePair
+      output += '"'
+      continue
+    }
+
+    if (char === '"') {
+      output += repInner
+      continue
+    }
+
+    output += char
+  }
+
+  return output
 }
 
 function coerceToString(val) {

@@ -1,62 +1,58 @@
-const safe = require('safe-regex')
-const RE2 = require('re2')
 const patterns = require('../src/regex')
-const vulnRegexDetector = require('vuln-regex-detector')
+const { parseJSON } = require('../src')
 
-function isSafeSafeRegex(regex) {
-  return safe(regex)
+const MAX_REGEX_MS = 250
+const MAX_PARSE_MS = 250
+
+function time(fn) {
+  const started = process.hrtime.bigint()
+  fn()
+  return Number(process.hrtime.bigint() - started) / 1e6
 }
 
-function isSafeRe2(regex) {
-  try {
-    new RE2(regex)
-    return true
-  } catch (error) {
-    return false
-  }
+function checkRegexPatterns() {
+  const inputs = [
+    ['comma-space run without close', '[' + ', '.repeat(16000) + 'x'],
+    ['escaped quote run', "'" + "\\'".repeat(16000)],
+    ['odd double quote run', '"'.repeat(32000) + "'"],
+    ['word colon run', 'a:'.repeat(32000)],
+  ]
+
+  patterns.forEach(({ name, regex }) => {
+    inputs.forEach(([inputName, input]) => {
+      regex.lastIndex = 0
+      const ms = time(() => regex.test(input))
+      console.log(`${name} / ${inputName}: ${ms.toFixed(2)}ms`)
+      if (ms > MAX_REGEX_MS) {
+        throw new Error(`Potential ReDoS pattern: ${name} took ${ms.toFixed(2)}ms for ${inputName}`)
+      }
+    })
+  })
 }
 
-console.log('Run quick check. May contain false positives')
-patterns.forEach((pat) => {
-  const safe = isSafeSafeRegex(pat)
-  console.log(`----------`)
-  console.log(`Checking ${pat}`)
-  console.log(`----------`)
-  if (!safe) {
-    console.log(`'safe-regex' says NOT SAFE ${pat}`)
-  } else {
-    console.log(`'safe-regex' says SAFE: ${pat}`)
-  }
-  const safeTwo = isSafeRe2(pat)
-  if (!safeTwo) {
-    console.log(`'re2' says NOT SAFE: ${pat}`)
-  } else {
-    console.log(`'re2' says SAFE: ${pat}`)
-  }
-})
+function checkParserAdversarialInputs() {
+  const cases = [
+    ['comma-space array without close', '[' + ', '.repeat(16000) + 'x'],
+    ['unbalanced quoted array', '[' + "'x', ".repeat(16000)],
+    ['many trailing commas', "['x'" + ','.repeat(16000) + ']'],
+    ['single quotes inside double string', `{ a: "${"'".repeat(16000)}" }`],
+  ]
 
-/* See ./tests/regexTest for output
-const regex = /'[^\\']*(\\'[^\\']*)*'/g // RegExp
-const pattern = regex.source // String
-const cacheConfig = {
-  type: vulnRegexDetector.cacheTypes.persistent
+  cases.forEach(([name, input]) => {
+    const ms = time(() => {
+      try {
+        parseJSON(input)
+      } catch (e) {}
+    })
+    console.log(`parseJSON / ${name}: ${ms.toFixed(2)}ms`)
+    if (ms > MAX_PARSE_MS) {
+      throw new Error(`Potential parser ReDoS path: ${name} took ${ms.toFixed(2)}ms`)
+    }
+  })
 }
-const config = {
-  cache: cacheConfig
-}
-console.log('Running robust scanner. This may take a while...')
-console.log('You might need to run scanner project directly https://github.com/davisjam/vuln-regex-detector locally')
 
-vulnRegexDetector.test(pattern, config).then((result) => {
-  if (result === vulnRegexDetector.responses.vulnerable) {
-    console.log('Regex is vulnerable')
-  } else if (result === vulnRegexDetector.responses.safe) {
-    console.log('Regex is safe')
-  } else {
-    console.log('Not sure if regex is safe or not')
-  }
-}).catch((err) => {
-  console.log('Validation Failed. Library vuln-regex-detector error', err)
-  console.log('Please run https://github.com/davisjam/vuln-regex-detector locally')
-})
-*/
+console.log('Checking regex patterns for adversarial timing')
+checkRegexPatterns()
+console.log('Checking parser adversarial inputs')
+checkParserAdversarialInputs()
+console.log('No obvious regex DoS timing issues found')

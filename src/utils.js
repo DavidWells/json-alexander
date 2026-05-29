@@ -5,14 +5,16 @@
  * @return {Boolean}
  */
 function isBalanced(str) {
-  return !str.split('').reduce((uptoPrevChar, thisChar) => {
-    if (thisChar === '(' || thisChar === '{' || thisChar === '[') {
-      return ++uptoPrevChar
-    } else if (thisChar === ')' || thisChar === '}' || thisChar === ']') {
-      return --uptoPrevChar
+  let count = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i]
+    if (char === '(' || char === '{' || char === '[') {
+      count++
+    } else if (char === ')' || char === '}' || char === ']') {
+      count--
     }
-    return uptoPrevChar
-  }, 0)
+  }
+  return count === 0
 }
 
 /**
