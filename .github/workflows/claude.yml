@@ -588,6 +588,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || github.token }}
+          # git-ops dispatches via GitHub App installation token, which acts as this bot
+          allowed_bots: 'custom-git-ops'
           # GITHUB ACTIONS (Maximum Freedom):
           settings: |
             {
