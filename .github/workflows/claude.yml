@@ -61,7 +61,8 @@ jobs:
           github.event.sender.login == 'github-actions[bot]' ||
           contains(fromJSON('["COLLABORATOR", "MEMBER", "OWNER"]'), github.event.comment.author_association)
         ) &&
-        contains(github.event.comment.body, '@claude')
+        contains(github.event.comment.body, '@claude') &&
+        !contains(github.event.comment.body, 'claude-dispatch-artifact')
       ) ||
       (
         github.event_name == 'issues' &&
@@ -72,7 +73,8 @@ jobs:
         (
           contains(github.event.issue.body, '@claude') ||
           contains(github.event.issue.title, '@claude')
-        )
+        ) &&
+        !contains(github.event.issue.body, 'claude-dispatch-artifact')
       ) ||
       (
         github.event_name == 'pull_request_review_comment' &&
